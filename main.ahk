@@ -33,7 +33,7 @@ LogDebug(msg) {
 
 ; Initialize and show main GUI
 Main() {
-    global MainGui, LVNames, EditNewName, BtnAdd, BtnDelete, BtnRegister, BtnUnregister, TxtStatus
+    global MainGui, LVNames, EditNewName, BtnAdd, BtnDelete, BtnToggleMenu, TxtStatus
     
     LogDebug("Main app started (Admin: " A_IsAdmin ")")
     
@@ -80,12 +80,10 @@ Main() {
     ; Info text
     MainGui.AddText("xp y+10 w480", "Right-click on files or folders to see 'Symlink File' option")
 
-    ; Register/Unregister buttons with icons
-    BtnRegister := MainGui.AddButton("xp y+10 w150", "➕ Register Menu")
-    BtnRegister.OnEvent("Click", OnRegisterClick)
-    
-    BtnUnregister := MainGui.AddButton("x+10 yp w150", "➖ Unregister Menu")
-    BtnUnregister.OnEvent("Click", OnUnregisterClick)
+    ; Register/Unregister toggle button
+    toggleText := isRegistered ? "➖ Unregister Menu" : "➕ Register Menu"
+    BtnToggleMenu := MainGui.AddButton("xp y+10 w180", toggleText)
+    BtnToggleMenu.OnEvent("Click", OnToggleMenuClick)
     
     ; Load pre-defined names
     RefreshListView()
@@ -106,16 +104,18 @@ RefreshListView() {
     LogDebug("Refreshed ListView with " names.Length " names")
 }
 
-; Update status text
+; Update status text and toggle button
 UpdateStatus() {
-    global TxtStatus
+    global TxtStatus, BtnToggleMenu
     isRegistered := IsContextMenuRegistered()
     if (isRegistered) {
         TxtStatus.Value := "Status: Registered"
         TxtStatus.SetFont("cGreen")
+        BtnToggleMenu.Text := "➖ Unregister Menu"
     } else {
         TxtStatus.Value := "Status: Not Registered"
         TxtStatus.SetFont("cRed")
+        BtnToggleMenu.Text := "➕ Register Menu"
     }
 }
 
@@ -187,29 +187,26 @@ OnDeleteClick(*) {
     }
 }
 
-; Register button click handler
-OnRegisterClick(*) {
-    LogDebug("Registering context menu")
-    
-    result := RegisterContextMenu()
-    if (result.success) {
-        MsgBox("Context menu registered successfully!`n`nYou can now right-click on files and folders to create symlinks.", "Symlink Creator", "Iconi")
-        UpdateStatus()
+; Toggle context menu registration
+OnToggleMenuClick(*) {
+    if (IsContextMenuRegistered()) {
+        LogDebug("Unregistering context menu")
+        result := UnregisterContextMenu()
+        if (result.success) {
+            MsgBox("Context menu unregistered successfully!", "Symlink Creator", "Iconi")
+            UpdateStatus()
+        } else {
+            MsgBox("Failed to unregister context menu.`n`n" result.error "`n`nPlease run as administrator.", "Symlink Creator", "Icon!")
+        }
     } else {
-        MsgBox("Failed to register context menu.`n`n" result.error "`n`nPlease run as administrator.", "Symlink Creator", "Icon!")
-    }
-}
-
-; Unregister button click handler
-OnUnregisterClick(*) {
-    LogDebug("Unregistering context menu")
-    
-    result := UnregisterContextMenu()
-    if (result.success) {
-        MsgBox("Context menu unregistered successfully!", "Symlink Creator", "Iconi")
-        UpdateStatus()
-    } else {
-        MsgBox("Failed to unregister context menu.`n`n" result.error "`n`nPlease run as administrator.", "Symlink Creator", "Icon!")
+        LogDebug("Registering context menu")
+        result := RegisterContextMenu()
+        if (result.success) {
+            MsgBox("Context menu registered successfully!`n`nYou can now right-click on files and folders to create symlinks.", "Symlink Creator", "Iconi")
+            UpdateStatus()
+        } else {
+            MsgBox("Failed to register context menu.`n`n" result.error "`n`nPlease run as administrator.", "Symlink Creator", "Icon!")
+        }
     }
 }
 
